@@ -1,6 +1,40 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Camera, Trash2, Package, X, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import toast from 'react-hot-toast'
+
+// Compress image to reduce storage
+async function compressImage(file, maxWidth = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        // Scale down if too large
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+
+        // Convert to compressed JPEG
+        const compressedData = canvas.toDataURL('image/jpeg', quality)
+        resolve(compressedData)
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 export default function ItemsTab({
   currentRoom,
@@ -9,7 +43,8 @@ export default function ItemsTab({
   onAddItem,
   onDeleteItem,
   onPhotoCapture,
-  onManualAdd
+  onManualAdd,
+  onAddPhoto
 }) {
   const [search, setSearch] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -17,6 +52,8 @@ export default function ItemsTab({
   const [expandedCategory, setExpandedCategory] = useState(null)
   const [showItemBrowser, setShowItemBrowser] = useState(true)
   const [photoViewer, setPhotoViewer] = useState({ open: false, photos: [], index: 0 })
+  const [cameraModal, setCameraModal] = useState({ open: false, itemId: null })
+  const fileInputRef = useRef(null)
   const [manualItem, setManualItem] = useState({
     name: '',
     cbm: '',
@@ -243,7 +280,7 @@ export default function ItemsTab({
               {/* Action Buttons */}
               <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                 <button
-                  onClick={() => onPhotoCapture && onPhotoCapture(item)}
+                  onClick={() => setCameraModal({ open: true, itemId: item.id })}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg
                            bg-gray-100 text-gray-600 text-sm hover:bg-gray-200"
                 >
@@ -448,6 +485,106 @@ export default function ItemsTab({
                 {photoViewer.index + 1} / {photoViewer.photos.length}
               </div>
             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Camera Modal */}
+      <AnimatePresence>
+        {cameraModal.open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setCameraModal({ open: false, itemId: null })}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm"
+            >
+              <h3 className="font-bold text-lg mb-4 text-center">Add Photo</h3>
+
+              <div className="space-y-3">
+                {/* Camera Button */}
+                <button
+                  onClick={async () => {
+                    try {
+                      // Create file input for camera
+                      const input = document.createElement('input')
+                      input.type = 'file'
+                      input.accept = 'image/*'
+                      input.capture = 'environment'
+
+                      input.onchange = async (e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          toast.loading('Processing...')
+                          const compressed = await compressImage(file, 800, 0.6)
+                          toast.dismiss()
+
+                          if (onAddPhoto) {
+                            onAddPhoto(cameraModal.itemId, compressed)
+                          }
+                          setCameraModal({ open: false, itemId: null })
+                          toast.success('Photo added!')
+                        }
+                      }
+
+                      input.click()
+                    } catch (err) {
+                      toast.error('Could not open camera')
+                    }
+                  }}
+                  className="w-full py-4 rounded-xl bg-blue-500 text-white font-medium
+                           flex items-center justify-center gap-2"
+                >
+                  <Camera size={20} />
+                  Open Camera
+                </button>
+
+                {/* Gallery Button */}
+                <button
+                  onClick={async () => {
+                    const input = document.createElement('input')
+                    input.type = 'file'
+                    input.accept = 'image/*'
+
+                    input.onchange = async (e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        toast.loading('Processing...')
+                        const compressed = await compressImage(file, 800, 0.6)
+                        toast.dismiss()
+
+                        if (onAddPhoto) {
+                          onAddPhoto(cameraModal.itemId, compressed)
+                        }
+                        setCameraModal({ open: false, itemId: null })
+                        toast.success('Photo added!')
+                      }
+                    }
+
+                    input.click()
+                  }}
+                  className="w-full py-4 rounded-xl bg-gray-100 text-gray-700 font-medium
+                           flex items-center justify-center gap-2"
+                >
+                  <Package size={20} />
+                  Choose from Gallery
+                </button>
+              </div>
+
+              <button
+                onClick={() => setCameraModal({ open: false, itemId: null })}
+                className="w-full mt-4 py-2 text-gray-500 text-sm"
+              >
+                Cancel
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -145,6 +145,33 @@ export default function SurveyorSurvey() {
     toast.success('Item deleted')
   }
 
+  async function addPhotoToItem(itemId, photoData) {
+    // Find current item and get existing photos
+    let currentPhotos = []
+    rooms.forEach(r => {
+      const item = r.survey_items?.find(i => i.id === itemId)
+      if (item?.photos) currentPhotos = item.photos
+    })
+
+    // Add new photo
+    const newPhotos = [...currentPhotos, photoData]
+
+    // Update in database
+    const { error } = await supabase.from('survey_items')
+      .update({ photos: newPhotos })
+      .eq('id', itemId)
+
+    if (!error) {
+      // Update local state
+      setRooms(p => p.map(r => ({
+        ...r,
+        survey_items: r.survey_items?.map(i =>
+          i.id === itemId ? { ...i, photos: newPhotos } : i
+        ) || []
+      })))
+    }
+  }
+
   async function handleStartSurvey() {
     // Update status to in_progress
     await supabase.from('survey_requests')
@@ -282,7 +309,7 @@ export default function SurveyorSurvey() {
                 onAddItem={addItemToRoom}
                 onDeleteItem={deleteItem}
                 onManualAdd={addManualItem}
-                onPhotoCapture={() => {/* TODO */}}
+                onAddPhoto={addPhotoToItem}
               />
             </motion.div>
           )}
