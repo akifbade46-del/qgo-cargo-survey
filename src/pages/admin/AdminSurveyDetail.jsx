@@ -9,7 +9,7 @@ import { useEmail } from '@/hooks/useEmail'
 import { useAuth } from '@/contexts/AuthContext'
 import { calcCBM, recommendContainer, CONTAINERS, getFillPercent } from '@/utils/cbm'
 import toast from 'react-hot-toast'
-import { ArrowLeft, MapPin, User, Home, Package, Copy, Mail, FileText, ExternalLink, Send, Edit2, Save, X, Truck, DollarSign } from 'lucide-react'
+import { ArrowLeft, MapPin, User, Home, Package, Copy, Mail, FileText, ExternalLink, Send, Edit2, Save, X, Truck, DollarSign, Star, Mic, MessageCircle, Image } from 'lucide-react'
 
 const STATUSES = ['pending','assigned','in_progress','surveyed','completed','cancelled']
 
@@ -22,6 +22,7 @@ export default function AdminSurveyDetail() {
   const [surveyors, setSurveyors] = useState([])
   const [rooms, setRooms]       = useState([])
   const [report, setReport]     = useState(null)
+  const [feedback, setFeedback] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
   const [emailSending, setEmailSending] = useState(false)
@@ -39,13 +40,14 @@ export default function AdminSurveyDetail() {
   useEffect(() => { load() }, [id])
 
   async function load() {
-    const [{ data: s }, { data: sv }, { data: rm }, { data: rp }] = await Promise.all([
+    const [{ data: s }, { data: sv }, { data: rm }, { data: rp }, { data: fb }] = await Promise.all([
       supabase.from('survey_requests').select('*').eq('id', id).single(),
       supabase.from('surveyors').select('id,name,is_available'),
       supabase.from('survey_rooms').select('*,survey_items(*)').eq('survey_request_id', id),
-      supabase.from('survey_reports').select('*').eq('survey_request_id', id).maybeSingle()
+      supabase.from('survey_reports').select('*').eq('survey_request_id', id).maybeSingle(),
+      supabase.from('feedback').select('*').eq('survey_request_id', id).maybeSingle()
     ])
-    setSurvey(s); setSurveyors(sv ?? []); setRooms(rm ?? []); setReport(rp)
+    setSurvey(s); setSurveyors(sv ?? []); setRooms(rm ?? []); setReport(rp); setFeedback(fb)
     // Initialize route data
     if (s) {
       setRouteData({
@@ -227,7 +229,10 @@ export default function AdminSurveyDetail() {
                     <div className="grid grid-cols-2 gap-1">
                       {room.survey_items?.map(item => (
                         <div key={item.id} className="flex justify-between text-xs text-gray-500 py-0.5">
-                          <span>{item.custom_name} ×{item.quantity}</span>
+                          <span className="flex items-center gap-1">
+                            {item.custom_name} ×{item.quantity}
+                            {item.photos?.length > 0 && <Image size={10} className="text-blue-400" />}
+                          </span>
                           <span className="font-mono">{(parseFloat(item.cbm)*item.quantity).toFixed(3)}</span>
                         </div>
                       ))}
@@ -236,6 +241,69 @@ export default function AdminSurveyDetail() {
                 ))}
               </div>
               {totalCBM > 0 && <div className="mt-4"><ContainerRecommendation totalCBM={totalCBM} selectedContainer={survey?.selected_container} /></div>}
+            </div>
+          )}
+
+          {/* Voice Note */}
+          {survey?.voice_note && (
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <Mic className="w-4 h-4 text-purple-500" />
+                <h3 className="font-semibold">Surveyor Voice Note</h3>
+              </div>
+              <audio src={survey.voice_note} controls className="w-full" />
+            </div>
+          )}
+
+          {/* Customer Feedback */}
+          {feedback && (
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <MessageCircle className="w-4 h-4 text-green-500" />
+                <h3 className="font-semibold">Customer Feedback</h3>
+              </div>
+
+              {/* Stars */}
+              <div className="flex items-center gap-1 mb-3">
+                {[1,2,3,4,5].map(star => (
+                  <Star
+                    key={star}
+                    size={20}
+                    className={star <= feedback.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                  />
+                ))}
+                <span className="ml-2 text-sm text-gray-600">{feedback.rating}/5</span>
+              </div>
+
+              {/* Tags */}
+              {feedback.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {feedback.tags.map(tag => (
+                    <span key={tag} className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Comment */}
+              {feedback.comment && (
+                <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 mb-3">
+                  "{feedback.comment}"
+                </p>
+              )}
+
+              {/* Recommend */}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500">Would recommend:</span>
+                <span className={feedback.would_recommend ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                  {feedback.would_recommend ? 'Yes ✓' : 'No ✗'}
+                </span>
+              </div>
+
+              <p className="text-xs text-gray-400 mt-3">
+                Submitted {new Date(feedback.created_at).toLocaleString()}
+              </p>
             </div>
           )}
         </div>
