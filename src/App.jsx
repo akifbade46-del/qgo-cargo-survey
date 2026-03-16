@@ -20,6 +20,7 @@ import AdminAnalytics     from '@/pages/admin/AdminAnalytics'
 import PricingManagement  from '@/pages/admin/PricingManagement'
 import SurveyReport       from '@/pages/admin/SurveyReport'
 import CustomerPortal     from '@/pages/CustomerPortal'
+import CustomerFeedback   from '@/pages/CustomerFeedback'
 
 // Surveyor Pages (Redesigned)
 import SurveyorLayout     from '@/pages/surveyor/SurveyorLayout'
@@ -53,6 +54,7 @@ export default function App() {
       <Route path="/login"         element={<LoginPage />} />
       <Route path="/track/:token"  element={<LiveTracking />} />
       <Route path="/portal/:token" element={<CustomerPortal />} />
+      <Route path="/feedback/:surveyId" element={<CustomerFeedback />} />
 
       {/* Admin */}
       <Route path="/admin" element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
