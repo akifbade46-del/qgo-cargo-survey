@@ -65,10 +65,11 @@ export default function SurveyorSurvey() {
     if (rm?.length > 0) setActiveRoom(rm[0].id)
 
     // Check if survey already has items (started)
-    // If completed, show details screen first with edit option
+    // If completed or surveyed, show details screen first with edit option
     const hasItems = (rm ?? []).some(r => r.survey_items?.length > 0)
-    if (s?.status === 'completed') {
-      setSurveyStarted(false) // Show details screen first for completed surveys
+    const isFinished = s?.status === 'completed' || s?.status === 'surveyed'
+    if (isFinished) {
+      setSurveyStarted(false) // Show details screen first for completed/surveyed surveys
       setWasOriginallyCompleted(true) // Track that this was originally completed
     } else {
       setSurveyStarted(hasItems || s?.status === 'in_progress')
