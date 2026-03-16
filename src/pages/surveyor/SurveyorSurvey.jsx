@@ -11,7 +11,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet'
 import L from 'leaflet'
 import CBMCounter from './components/CBMCounter'
 import RoomTabs from './components/RoomTabs'
-import QuickAddModal from './components/QuickAddModal'
+import QuickAddInput from './components/QuickAddInput'
 import ManualItemModal from './components/ManualItemModal'
 import FeedbackModal from './components/FeedbackModal'
 import ItemCard from './components/ItemCard'
@@ -41,7 +41,7 @@ export default function SurveyorSurvey() {
   const [loading, setLoading] = useState(true)
   const [activeRoom, setActiveRoom] = useState(null)
   const [addRoomModal, setAddRoomModal] = useState(false)
-  const [addItemModal, setAddItemModal] = useState(false)
+  // addItemModal state removed - using inline input now
   const [manualItemModal, setManualItemModal] = useState(false)
   const [feedbackModal, setFeedbackModal] = useState(false)
   const [newRoom, setNewRoom] = useState('')
@@ -336,19 +336,17 @@ export default function SurveyorSurvey() {
         )}
       </div>
 
-      {/* Add Item FAB */}
+      {/* Quick Add Input - sticky at bottom */}
       {activeRoom && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setAddItemModal(true)}
-          className="fixed bottom-24 right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-30"
-          style={{ backgroundColor: 'var(--color-primary)' }}
-        >
-          <Plus size={24} className="text-white" />
-        </motion.button>
+        <QuickAddInput
+          onAdd={addItemToRoom}
+          onManualAdd={(name) => setManualItemModal(true)}
+          rooms={rooms}
+          activeRoom={activeRoom}
+          placeholder="Type item name to add..."
+          items={items}
+          categories={cats}
+        />
       )}
 
       {/* Complete Survey Button */}
@@ -439,16 +437,6 @@ export default function SurveyorSurvey() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Add Item Modal */}
-      <QuickAddModal
-        isOpen={addItemModal}
-        onClose={() => setAddItemModal(false)}
-        items={items}
-        categories={cats}
-        onAddItem={(item) => { addItemToRoom(item); setAddItemModal(false) }}
-        onManualAdd={() => { setAddItemModal(false); setManualItemModal(true) }}
-      />
 
       {/* Manual Item Modal */}
       <ManualItemModal
