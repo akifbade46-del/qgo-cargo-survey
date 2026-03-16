@@ -383,6 +383,39 @@ export default function AdminSurveyDetail() {
                     />
                   )}
                 </div>
+
+                {/* Send Feedback Request */}
+                {survey?.status === 'completed' && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-400 px-1 mb-2">Request Feedback</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const feedbackUrl = `${window.location.origin}/feedback/${survey.id}`
+                          const message = `Hi ${survey.customer_name}! Thank you for completing your survey #${survey.reference_number}. Please share your feedback: ${feedbackUrl}`
+                          const whatsappUrl = `https://wa.me/${survey.whatsapp_number?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+                          window.open(whatsappUrl, '_blank')
+                        }}
+                        disabled={!survey?.whatsapp_number}
+                        className="flex-1 py-2 rounded-lg bg-green-500 text-white text-xs font-medium flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-gray-300"
+                      >
+                        <MessageCircle size={14} /> WhatsApp
+                      </button>
+                      <button
+                        onClick={() => {
+                          const feedbackUrl = `${window.location.origin}/feedback/${survey.id}`
+                          const subject = `Feedback for Survey #${survey.reference_number}`
+                          const body = `Hi ${survey.customer_name}!\n\nThank you for completing your survey. Please share your feedback:\n\n${feedbackUrl}`
+                          window.location.href = `mailto:${survey.customer_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+                        }}
+                        disabled={!survey?.customer_email}
+                        className="flex-1 py-2 rounded-lg bg-blue-500 text-white text-xs font-medium flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-gray-300"
+                      >
+                        <Mail size={14} /> Email
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
