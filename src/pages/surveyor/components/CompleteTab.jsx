@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Package, Truck, Home, Mic, Square, CheckCircle } from 'lucide-react'
+import { Package, Truck, Home, Mic, Square, CheckCircle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function CompleteTab({
@@ -8,7 +8,8 @@ export default function CompleteTab({
   allItems,
   voiceNote,
   setVoiceNote,
-  onComplete
+  onComplete,
+  isUpdate = false
 }) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -130,17 +131,18 @@ export default function CompleteTab({
         )}
       </div>
 
-      {/* Complete Button */}
+      {/* Complete/Update Button */}
       <motion.button
         whileTap={{ scale: 0.98 }}
         onClick={onComplete}
         disabled={allItems.length === 0}
-        className="w-full py-4 rounded-2xl bg-green-600 text-white font-semibold
+        className={`w-full py-4 rounded-2xl text-white font-semibold
                  flex items-center justify-center gap-2 shadow-lg
-                 disabled:opacity-50 disabled:cursor-not-allowed"
+                 disabled:opacity-50 disabled:cursor-not-allowed
+                 ${isUpdate ? 'bg-blue-600' : 'bg-green-600'}`}
       >
-        <CheckCircle size={20} />
-        Complete Survey
+        {isUpdate ? <RefreshCw size={20} /> : <CheckCircle size={20} />}
+        {isUpdate ? 'Update Survey' : 'Complete Survey'}
       </motion.button>
     </div>
   )

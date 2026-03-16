@@ -26,6 +26,7 @@ export default function SurveyorSurvey() {
   const [showFeedbackPopup, setShowFeedbackPopup] = useState(false)
   const [addRoomModal, setAddRoomModal] = useState(false)
   const [newRoom, setNewRoom] = useState('')
+  const [wasOriginallyCompleted, setWasOriginallyCompleted] = useState(false)
 
   // Get current room and all items
   const currentRoom = rooms.find(r => r.id === activeRoom)
@@ -57,6 +58,10 @@ export default function SurveyorSurvey() {
     setRooms(rm ?? [])
     setItems(it ?? [])
     setCategories(cats ?? [])
+    // Load existing voice note if present (for update mode)
+    if (s?.voice_note) {
+      setVoiceNote(s.voice_note)
+    }
     if (rm?.length > 0) setActiveRoom(rm[0].id)
 
     // Check if survey already has items (started)
@@ -64,6 +69,7 @@ export default function SurveyorSurvey() {
     const hasItems = (rm ?? []).some(r => r.survey_items?.length > 0)
     if (s?.status === 'completed') {
       setSurveyStarted(false) // Show details screen first for completed surveys
+      setWasOriginallyCompleted(true) // Track that this was originally completed
     } else {
       setSurveyStarted(hasItems || s?.status === 'in_progress')
     }
@@ -193,24 +199,25 @@ export default function SurveyorSurvey() {
   }
 
   async function completeSurvey() {
-    // Save voice note if recorded
+    // Save voice note if recorded (or keep existing one)
     if (voiceNote) {
       await supabase.from('survey_requests')
         .update({ voice_note: voiceNote })
         .eq('id', id)
     }
 
-    // Check if survey was already completed (update mode)
-    const wasCompleted = survey?.status === 'completed'
-
-    if (!wasCompleted) {
+    // Check if this was originally a completed survey (update mode)
+    if (!wasOriginallyCompleted) {
       // First time completion - update status
       await supabase.from('survey_requests')
         .update({ status: 'completed' })
         .eq('id', id)
       setShowFeedbackPopup(true)
     } else {
-      // Update mode - just show success
+      // Update mode - just show success, keep status as completed
+      await supabase.from('survey_requests')
+        .update({ status: 'completed' })
+        .eq('id', id)
       toast.success('Survey updated!')
       navigate('/surveyor')
     }
@@ -321,6 +328,7 @@ export default function SurveyorSurvey() {
                 voiceNote={voiceNote}
                 setVoiceNote={setVoiceNote}
                 onComplete={completeSurvey}
+                isUpdate={survey?.status === 'completed' || survey?.voice_note}
               />
             </motion.div>
           )}
