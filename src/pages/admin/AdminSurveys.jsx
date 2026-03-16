@@ -135,10 +135,16 @@ export default function AdminSurveys() {
                           <Mic size={10} />
                         </span>
                       )}
-                      {/* Feedback indicator */}
+                      {/* Feedback indicator with stars */}
                       {s.hasFeedback && (
-                        <span className="text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Star size={10} className="fill-yellow-400" /> {s.feedbackRating}
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full flex items-center gap-0.5" title={`Rating: ${s.feedbackRating}/5`}>
+                          {[1,2,3,4,5].map(star => (
+                            <Star
+                              key={star}
+                              size={10}
+                              className={star <= s.feedbackRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                            />
+                          ))}
                         </span>
                       )}
                     </div>
@@ -146,7 +152,7 @@ export default function AdminSurveys() {
                   <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-3 text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Link to={`/admin/surveys/${s.id}`} className="text-xs text-qgo-blue hover:underline">View</Link>
                       {/* WhatsApp Button */}
                       {s.whatsapp_number && (
@@ -157,6 +163,20 @@ export default function AdminSurveys() {
                           customerPhone={s.whatsapp_number}
                           className="!p-1 !px-2"
                         />
+                      )}
+                      {/* Send Feedback Request for completed surveys without feedback */}
+                      {s.status === 'completed' && !s.hasFeedback && s.whatsapp_number && (
+                        <button
+                          onClick={() => {
+                            const feedbackUrl = `${window.location.origin}/feedback/${s.id}`
+                            const message = `Hi ${s.customer_name}! Thank you for completing your survey #${s.reference_number}. Please share your feedback: ${feedbackUrl}`
+                            window.open(`https://wa.me/${s.whatsapp_number?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank')
+                          }}
+                          className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full hover:bg-yellow-200 flex items-center gap-1"
+                          title="Send feedback request"
+                        >
+                          <Star size={10} /> Request Feedback
+                        </button>
                       )}
                     </div>
                   </td>
