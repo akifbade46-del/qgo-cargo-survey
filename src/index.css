@@ -1,0 +1,260 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dynamic Branding Variables - Updated from Settings */
+:root {
+  --color-primary: #0D5C9E;
+  --color-secondary: #90CCE0;
+  --color-navy: #083D6E;
+  --color-bg: #EAF4FA;
+  --color-text: #1A2B3C;
+  --color-primary-rgb: 13, 92, 158;
+  --color-navy-rgb: 8, 61, 110;
+
+  /* Light theme (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border-color: #e5e7eb;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --fab-shadow: 0 4px 14px rgba(13, 92, 158, 0.4);
+}
+
+/* Dark theme */
+.dark {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --border-color: #374151;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --fab-shadow: 0 4px 14px rgba(13, 92, 158, 0.5);
+}
+
+/* Auto theme - follows system preference */
+@media (prefers-color-scheme: dark) {
+  .auto-theme {
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --bg-tertiary: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --border-color: #374151;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --fab-shadow: 0 4px 14px rgba(13, 92, 158, 0.5);
+  }
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-white;
+    color: var(--color-text);
+  }
+
+  body.dark, .dark body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  body.auto-theme {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-qgo-blue text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-qgo-navy transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply border border-qgo-blue text-qgo-blue px-5 py-2.5 rounded-lg font-semibold hover:bg-qgo-bg transition-colors;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6;
+  }
+  .input {
+    @apply w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-qgo-blue transition-colors;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  .badge-pending {
+    @apply bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+  }
+  .badge-assigned {
+    @apply bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+  }
+  .badge-completed {
+    @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+  }
+  .badge-cancelled {
+    @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+  }
+
+  /* Dark mode component variants */
+  .dark .card {
+    @apply bg-gray-800 border-gray-700;
+  }
+  .dark .input {
+    @apply bg-gray-800 border-gray-600 text-white;
+  }
+  .dark .label {
+    @apply text-gray-300;
+  }
+  .dark .btn-secondary {
+    @apply border-qgo-cyan text-qgo-cyan hover:bg-gray-800;
+  }
+
+  /* Surveyor-specific components */
+  .surveyor-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-4;
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+  }
+
+  .surveyor-tab {
+    @apply px-4 py-2 text-sm font-medium transition-colors;
+    color: var(--text-secondary);
+  }
+
+  .surveyor-tab.active {
+    @apply border-b-2;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .surveyor-fab {
+    @apply fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform;
+    background-color: var(--color-primary);
+    box-shadow: var(--fab-shadow);
+  }
+
+  .surveyor-fab:hover {
+    @apply scale-105;
+  }
+
+  .surveyor-fab:active {
+    @apply scale-95;
+  }
+
+  .stat-card {
+    @apply rounded-xl p-4 flex items-center gap-3;
+    background-color: var(--bg-secondary);
+  }
+
+  .room-tab {
+    @apply px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors;
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+  }
+
+  .room-tab.active {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .offline-banner {
+    @apply fixed top-0 left-0 right-0 py-2 text-center text-sm font-medium z-50;
+    background-color: #f59e0b;
+    color: white;
+  }
+}
+
+/* Leaflet Map Customizations - Light Theme */
+.leaflet-container {
+  font-family: 'Inter', sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255,255,255,0.8) !important;
+  font-size: 10px;
+}
+
+/* Pulse animation for markers */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* RTL Support */
+[dir='rtl'] {
+  direction: rtl;
+}
+
+[dir='rtl'] .font-arabic {
+  font-family: 'Noto Sans Arabic', 'Tajawal', 'Cairo', sans-serif;
+}
+
+[dir='rtl'] .space-x-2 > * + * {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+[dir='rtl'] .space-x-3 > * + * {
+  margin-left: 0;
+  margin-right: 0.75rem;
+}
+
+[dir='rtl'] .space-x-4 > * + * {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+[dir='rtl'] .divide-x > * + * {
+  border-left: 0;
+  border-right-width: 1px;
+}
+
+[dir='rtl'] .text-left {
+  text-align: right;
+}
+
+[dir='rtl'] .text-right {
+  text-align: left;
+}
+
+[dir='rtl'] .flex.items-center.gap-2 > * + * {
+  margin-left: 0;
+}
+
+[dir='rtl'] .input,
+[dir='rtl'] .select {
+  text-align: right;
+}
+
+[dir='rtl'] [dir='ltr'] {
+  direction: ltr;
+}
+
+[dir='rtl'] .arrow-right::before {
+  transform: rotate(180deg);
+}
+
+[dir='rtl'] .arrow-left::before {
+  transform: rotate(180deg);
+}

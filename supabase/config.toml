@@ -1,0 +1,7 @@
+# Supabase project config for Q'go Cargo Survey Platform
+# Project: qgo-cargo-survey
+# Project ID: evxjnkoxupqkmewtuusv
+# Region: ap-south-1 (Mumbai)
+
+[project]
+id = "evxjnkoxupqkmewtuusv"
