@@ -15,7 +15,6 @@ import QuickAddModal from './components/QuickAddModal'
 import ManualItemModal from './components/ManualItemModal'
 import FeedbackModal from './components/FeedbackModal'
 import ItemCard from './components/ItemCard'
-import { MessageSquare } from 'lucide-react'
 
 // Custom marker icons
 const fromIcon = new L.Icon({
