@@ -213,6 +213,7 @@ export default function SurveyorSurvey() {
     return (
       <SurveyDetails
         survey={survey}
+        rooms={rooms}
         onStart={handleStartSurvey}
         onReopen={handleReopenSurvey}
         isCompleted={survey?.status === 'completed'}
@@ -222,6 +223,9 @@ export default function SurveyorSurvey() {
 
   // Calculate total photos from all items
   const totalPhotos = allItems.reduce((sum, item) => sum + (item.photos?.length || 0), 0)
+
+  // Calculate total CBM
+  const totalCb = allItems.reduce((sum, item) => sum + (item.cbm * (item.quantity || 1)), 0)
 
   const isCompleted = survey?.status === 'completed'
 

@@ -1,11 +1,17 @@
 import { motion } from 'framer-motion'
 import {
   User, Phone, Mail, MapPin, Truck, Package,
-  Calendar, FileText, Play, Edit2, Mic, Image
+  Calendar, FileText, Play, Edit2, Mic, Image, Home
 } from 'lucide-react'
 
-export default function SurveyDetails({ survey, onStart, onReopen, isCompleted }) {
+export default function SurveyDetails({ survey, onStart, onReopen, isCompleted, rooms = [] }) {
   if (!survey) return null
+
+  // Calculate totals from rooms
+  const allItems = rooms.flatMap(r => r.survey_items || [])
+  const totalItems = allItems.length
+  const totalCb = allItems.reduce((sum, item) => sum + (item.cbm * (item.quantity || 1)), 0)
+  const totalPhotos = allItems.reduce((sum, item) => sum + (item.photos?.length || 0), 0)
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -27,9 +33,19 @@ export default function SurveyDetails({ survey, onStart, onReopen, isCompleted }
               {survey.status || 'Pending'}
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm opacity-90">
-            <Calendar size={16} />
-            <span>{new Date(survey.created_at).toLocaleDateString()}</span>
+          <div className="flex items-center gap-4 text-sm opacity-90">
+            <div className="flex items-center gap-1">
+              <Calendar size={14} />
+              <span>{new Date(survey.created_at).toLocaleDateString()}</span>
+            </div>
+            {isCompleted && (
+              <>
+                <span>•</span>
+                <span>{totalItems} items</span>
+                <span>•</span>
+                <span>{totalCb.toFixed(1)} CBM</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -121,27 +137,73 @@ export default function SurveyDetails({ survey, onStart, onReopen, isCompleted }
 
         {/* Completed Survey Info */}
         {isCompleted && (
-          <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
-            <h3 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
-              <FileText size={16} />
-              Survey Already Completed
-            </h3>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {survey.voice_note && (
-                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full flex items-center gap-1">
-                  <Mic size={12} /> Voice Note
-                </span>
-              )}
-              {survey.total_photos > 0 && (
-                <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full flex items-center gap-1">
-                  <Image size={12} /> {survey.total_photos} Photos
-                </span>
-              )}
+          <>
+            <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
+              <h3 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                <FileText size={16} />
+                Survey Already Completed
+              </h3>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {survey.voice_note && (
+                  <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full flex items-center gap-1">
+                    <Mic size={12} /> Voice Note
+                  </span>
+                )}
+                {totalPhotos > 0 && (
+                  <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full flex items-center gap-1">
+                    <Image size={12} /> {totalPhotos} Photos
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-blue-600">
+                You can edit this survey. Voice note and photos will be preserved.
+              </p>
             </div>
-            <p className="text-sm text-blue-600">
-              You can edit this survey. Voice note and photos will be preserved.
-            </p>
-          </div>
+
+            {/* Survey Items List */}
+            {rooms.length > 0 && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Home size={18} className="text-blue-500" />
+                  Surveyed Items ({totalItems})
+                </h3>
+                <div className="space-y-3">
+                  {rooms.map(room => (
+                    <div key={room.id} className="border border-gray-100 rounded-xl p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <p className="font-medium text-sm text-gray-800">🏠 {room.room_name}</p>
+                        <span className="text-xs text-gray-400">
+                          {room.survey_items?.length || 0} items
+                        </span>
+                      </div>
+                      {room.survey_items?.length > 0 && (
+                        <div className="space-y-1">
+                          {room.survey_items.map(item => (
+                            <div key={item.id} className="flex justify-between text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
+                              <span className="flex items-center gap-1">
+                                {item.custom_name || item.name}
+                                <span className="text-gray-400">×{item.quantity || 1}</span>
+                                {item.photos?.length > 0 && (
+                                  <Image size={10} className="text-blue-400" />
+                                )}
+                              </span>
+                              <span className="font-mono text-gray-500">
+                                {(item.cbm * (item.quantity || 1)).toFixed(3)} CBM
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-sm">
+                  <span className="text-gray-500">Total Volume</span>
+                  <span className="font-bold text-blue-600">{totalCb.toFixed(2)} CBM</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Notes */}
