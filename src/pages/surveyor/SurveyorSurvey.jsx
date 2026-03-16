@@ -40,7 +40,7 @@ export default function SurveyorSurvey() {
           id, reference_number, customer_name, customer_email, customer_phone,
           from_address, from_city, from_country,
           to_address, to_city, to_country,
-          selected_container, move_type, notes, status, created_at
+          selected_container, move_type, notes, status, created_at, voice_note
         `)
         .eq('id', id).single(),
       supabase.from('survey_rooms')
@@ -60,8 +60,13 @@ export default function SurveyorSurvey() {
     if (rm?.length > 0) setActiveRoom(rm[0].id)
 
     // Check if survey already has items (started)
+    // If completed, show details screen first with edit option
     const hasItems = (rm ?? []).some(r => r.survey_items?.length > 0)
-    setSurveyStarted(hasItems || s?.status === 'in_progress')
+    if (s?.status === 'completed') {
+      setSurveyStarted(false) // Show details screen first for completed surveys
+    } else {
+      setSurveyStarted(hasItems || s?.status === 'in_progress')
+    }
 
     setLoading(false)
   }
@@ -215,8 +220,10 @@ export default function SurveyorSurvey() {
     )
   }
 
-  const totalCb = allItems.reduce((sum, item) =>
-    sum + (item.cbm * (item.quantity || 1)), 0)
+  // Calculate total photos from all items
+  const totalPhotos = allItems.reduce((sum, item) => sum + (item.photos?.length || 0), 0)
+
+  const isCompleted = survey?.status === 'completed'
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -227,8 +234,23 @@ export default function SurveyorSurvey() {
             <h1 className="font-bold text-gray-900">#{survey?.reference_number}</h1>
             <p className="text-sm text-gray-500">{survey?.customer_name}</p>
           </div>
-          <div className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
-            {totalCb.toFixed(1)} CBM
+          <div className="flex items-center gap-2">
+            {/* Voice Note Indicator */}
+            {survey?.voice_note && (
+              <div className="px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium flex items-center gap-1">
+                🎤 Voice
+              </div>
+            )}
+            {/* Photos Indicator */}
+            {totalPhotos > 0 && (
+              <div className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium flex items-center gap-1">
+                📷 {totalPhotos}
+              </div>
+            )}
+            {/* CBM Badge */}
+            <div className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+              {totalCb.toFixed(1)} CBM
+            </div>
           </div>
         </div>
       </div>
