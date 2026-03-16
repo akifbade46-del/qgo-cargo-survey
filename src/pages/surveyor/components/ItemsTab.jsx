@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Camera, Trash2, Package, X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, Camera, Trash2, Package, X, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function ItemsTab({
   currentRoom,
@@ -16,6 +16,7 @@ export default function ItemsTab({
   const [manualModal, setManualModal] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState(null)
   const [showItemBrowser, setShowItemBrowser] = useState(true)
+  const [photoViewer, setPhotoViewer] = useState({ open: false, photos: [], index: 0 })
   const [manualItem, setManualItem] = useState({
     name: '',
     cbm: '',
@@ -229,9 +230,12 @@ export default function ItemsTab({
                 </div>
                 <div className="flex items-center gap-2">
                   {item.photos?.length > 0 && (
-                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
-                      📷 {item.photos.length}
-                    </span>
+                    <button
+                      onClick={() => setPhotoViewer({ open: true, photos: item.photos, index: 0 })}
+                      className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full hover:bg-blue-200 flex items-center gap-1"
+                    >
+                      <Camera size={12} /> {item.photos.length} Photo{item.photos.length > 1 ? 's' : ''}
+                    </button>
                   )}
                 </div>
               </div>
@@ -375,6 +379,75 @@ export default function ItemsTab({
                 </button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Photo Viewer Modal */}
+      <AnimatePresence>
+        {photoViewer.open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
+            onClick={() => setPhotoViewer({ open: false, photos: [], index: 0 })}
+          >
+            <button
+              onClick={() => setPhotoViewer({ open: false, photos: [], index: 0 })}
+              className="absolute top-4 right-4 text-white/80 hover:text-white p-2"
+            >
+              <X size={32} />
+            </button>
+
+            {/* Navigation */}
+            {photoViewer.photos.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPhotoViewer(p => ({
+                      ...p,
+                      index: p.index > 0 ? p.index - 1 : p.photos.length - 1
+                    }))
+                  }}
+                  className="absolute left-4 text-white/80 hover:text-white p-2"
+                >
+                  <ChevronLeft size={40} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPhotoViewer(p => ({
+                      ...p,
+                      index: p.index < p.photos.length - 1 ? p.index + 1 : 0
+                    }))
+                  }}
+                  className="absolute right-4 text-white/80 hover:text-white p-2"
+                >
+                  <ChevronRight size={40} />
+                </button>
+              </>
+            )}
+
+            {/* Photo */}
+            <motion.img
+              key={photoViewer.index}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              src={photoViewer.photos[photoViewer.index]}
+              alt={`Photo ${photoViewer.index + 1}`}
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+              onClick={e => e.stopPropagation()}
+            />
+
+            {/* Counter */}
+            {photoViewer.photos.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm">
+                {photoViewer.index + 1} / {photoViewer.photos.length}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
