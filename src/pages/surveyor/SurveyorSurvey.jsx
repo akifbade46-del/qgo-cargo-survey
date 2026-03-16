@@ -6,13 +6,16 @@ import { supabase } from '@/lib/supabase'
 import { calcCBM, recommendContainer, CONTAINERS, getFillPercent } from '@/utils/cbm'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, CheckCircle, Package, MapPin, Edit2, Save, X, Truck, Camera, Mic, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, CheckCircle, Package, MapPin, Edit2, Save, X, Truck, Camera, Mic, ChevronDown, MessageSquare } from 'lucide-react'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
 import L from 'leaflet'
 import CBMCounter from './components/CBMCounter'
 import RoomTabs from './components/RoomTabs'
 import QuickAddModal from './components/QuickAddModal'
+import ManualItemModal from './components/ManualItemModal'
+import FeedbackModal from './components/FeedbackModal'
 import ItemCard from './components/ItemCard'
+import { MessageSquare } from 'lucide-react'
 
 // Custom marker icons
 const fromIcon = new L.Icon({
@@ -40,6 +43,8 @@ export default function SurveyorSurvey() {
   const [activeRoom, setActiveRoom] = useState(null)
   const [addRoomModal, setAddRoomModal] = useState(false)
   const [addItemModal, setAddItemModal] = useState(false)
+  const [manualItemModal, setManualItemModal] = useState(false)
+  const [feedbackModal, setFeedbackModal] = useState(false)
   const [newRoom, setNewRoom] = useState('')
   const [saving, setSaving] = useState(false)
   const [editingRoute, setEditingRoute] = useState(false)
@@ -349,16 +354,30 @@ export default function SurveyorSurvey() {
 
       {/* Complete Survey Button */}
       {allItems.length > 0 && (
-        <motion.button
+        <motion.div
           initial={{ y: 100 }}
           animate={{ y: 0 }}
-          className="fixed bottom-4 left-4 right-4 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg z-30 text-white max-w-2xl mx-auto"
-          style={{ backgroundColor: '#16a34a' }}
-          onClick={completeSurvey}
-          disabled={saving}
+          className="fixed bottom-4 left-4 right-4 z-30 max-w-2xl mx-auto space-y-2"
         >
-          <CheckCircle size={20} /> {saving ? 'Saving...' : 'Complete Survey'}
-        </motion.button>
+          {/* Feedback Button */}
+          <button
+            onClick={() => setFeedbackModal(true)}
+            className="w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+          >
+            <MessageSquare size={18} /> Get Customer Feedback
+          </button>
+
+          {/* Complete Button */}
+          <button
+            className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg text-white"
+            style={{ backgroundColor: '#16a34a' }}
+            onClick={completeSurvey}
+            disabled={saving}
+          >
+            <CheckCircle size={20} /> {saving ? 'Saving...' : 'Complete Survey'}
+          </button>
+        </motion.div>
       )}
 
       {/* Add Room Modal */}
@@ -429,6 +448,39 @@ export default function SurveyorSurvey() {
         items={items}
         categories={cats}
         onAddItem={(item) => { addItemToRoom(item); setAddItemModal(false) }}
+        onManualAdd={() => { setAddItemModal(false); setManualItemModal(true) }}
+      />
+
+      {/* Manual Item Modal */}
+      <ManualItemModal
+        isOpen={manualItemModal}
+        onClose={() => setManualItemModal(false)}
+        onSave={async (customItem) => {
+          const { data, error } = await supabase.from('survey_items').insert([{
+            survey_room_id: activeRoom,
+            item_id: null,
+            custom_name: customItem.custom_name,
+            cbm: customItem.cbm,
+            weight_kg: customItem.weight_kg,
+            is_fragile: customItem.is_fragile,
+            quantity: customItem.quantity,
+            notes: customItem.notes
+          }]).select().single()
+
+          if (!error && data) {
+            setRooms(p => p.map(r => r.id === activeRoom
+              ? { ...r, survey_items: [...(r.survey_items || []), data] }
+              : r))
+          }
+        }}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={feedbackModal}
+        onClose={() => setFeedbackModal(false)}
+        survey={survey}
+        onComplete={() => setFeedbackModal(false)}
       />
     </div>
   )

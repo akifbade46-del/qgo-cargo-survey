@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Package, Camera, Mic, Trash2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { supabase } from '@/lib/supabase'
+import PhotoUploader from './PhotoUploader'
+import VoiceRecorder from './VoiceRecorder'
 
-export default function ItemCard({ item, onUpdate, onDelete, onAddPhoto, onAddVoice }) {
+export default function ItemCard({ item, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState({
@@ -11,6 +14,34 @@ export default function ItemCard({ item, onUpdate, onDelete, onAddPhoto, onAddVo
     cbm: item.cbm || 0,
     notes: item.notes || ''
   })
+  const [photos, setPhotos] = useState([])
+  const [voiceNotes, setVoiceNotes] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  // Load attachments on mount
+  useEffect(() => {
+    if (item.id) loadAttachments()
+  }, [item.id])
+
+  async function loadAttachments() {
+    setLoading(true)
+    try {
+      const { data } = await supabase
+        .from('item_attachments')
+        .select('*')
+        .eq('survey_item_id', item.id)
+        .order('created_at', { ascending: true })
+
+      if (data) {
+        setPhotos(data.filter(a => a.type === 'photo'))
+        setVoiceNotes(data.filter(a => a.type === 'voice'))
+      }
+    } catch (err) {
+      console.error('Failed to load attachments')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleUpdate = async () => {
     if (onUpdate) {
@@ -19,6 +50,8 @@ export default function ItemCard({ item, onUpdate, onDelete, onAddPhoto, onAddVo
     }
     setEditing(false)
   }
+
+  const hasAttachments = photos.length > 0 || voiceNotes.length > 0
 
   return (
     <motion.div
@@ -46,31 +79,22 @@ export default function ItemCard({ item, onUpdate, onDelete, onAddPhoto, onAddVo
           </p>
         </div>
 
+        {/* Attachment Count Badges */}
+        <div className="flex items-center gap-1">
+          {photos.length > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex items-center gap-1">
+              <Camera size={12} /> {photos.length}
+            </span>
+          )}
+          {voiceNotes.length > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 flex items-center gap-1">
+              <Mic size={12} /> {voiceNotes.length}
+            </span>
+          )}
+        </div>
+
         {/* Action Buttons */}
         <div className="flex items-center gap-1">
-          {onAddPhoto && (
-            <button
-              onClick={() => onAddPhoto(item)}
-              className={`relative p-2 rounded-lg transition-colors`}
-              style={{ backgroundColor: item.photos?.length > 0 ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-tertiary)', color: item.photos?.length > 0 ? '#3b82f6' : 'var(--text-tertiary)' }}
-            >
-              <Camera size={16} />
-              {item.photos?.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {item.photos.length}
-                </span>
-              )}
-            </button>
-          )}
-          {onAddVoice && (
-            <button
-              onClick={() => onAddVoice(item)}
-              className={`p-2 rounded-lg transition-colors`}
-              style={{ backgroundColor: item.voice_notes?.length > 0 ? 'rgba(249, 115, 22, 0.1)' : 'var(--bg-tertiary)', color: item.voice_notes?.length > 0 ? '#f97316' : 'var(--text-tertiary)' }}
-            >
-              <Mic size={16} />
-            </button>
-          )}
           <button
             onClick={() => setExpanded(!expanded)}
             className="p-2 rounded-lg transition-colors"
@@ -98,9 +122,34 @@ export default function ItemCard({ item, onUpdate, onDelete, onAddPhoto, onAddVo
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-3 pt-1 border-t" style={{ borderColor: 'var(--border-color)' }}>
+            <div className="px-3 pb-3 pt-1 border-t space-y-4" style={{ borderColor: 'var(--border-color)' }}>
+              {/* Photo Uploader */}
+              <div>
+                <p className="text-xs font-medium mb-2 flex items-center gap-1" style={{ color: 'var(--text-tertiary)' }}>
+                  <Camera size={12} /> Photos
+                </p>
+                <PhotoUploader
+                  itemId={item.id}
+                  existingPhotos={photos}
+                  onUploaded={() => loadAttachments()}
+                />
+              </div>
+
+              {/* Voice Recorder */}
+              <div>
+                <p className="text-xs font-medium mb-2 flex items-center gap-1" style={{ color: 'var(--text-tertiary)' }}>
+                  <Mic size={12} /> Voice Notes
+                </p>
+                <VoiceRecorder
+                  itemId={item.id}
+                  existingNotes={voiceNotes}
+                  onRecorded={() => loadAttachments()}
+                />
+              </div>
+
+              {/* Edit Section */}
               {editing ? (
-                <div className="space-y-2 mt-2">
+                <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--border-color)' }}>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-xs block mb-1" style={{ color: 'var(--text-tertiary)' }}>Quantity</label>
@@ -154,48 +203,13 @@ export default function ItemCard({ item, onUpdate, onDelete, onAddPhoto, onAddVo
                   </div>
                 </div>
               ) : (
-                <div className="mt-2">
-                  {/* Photos Preview */}
-                  {item.photos?.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-tertiary)' }}>Photos ({item.photos.length})</p>
-                      <div className="flex gap-1 overflow-x-auto">
-                        {item.photos.map((photo, i) => (
-                          <img key={i} src={photo} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Voice Notes */}
-                  {item.voice_notes?.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-tertiary)' }}>Voice Notes ({item.voice_notes.length})</p>
-                      {item.voice_notes.map((note, i) => (
-                        <div key={i} className="flex items-center gap-2 p-2 rounded-lg mb-1" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                          <Mic size={14} style={{ color: 'var(--text-tertiary)' }} />
-                          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{note.duration}s</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Notes */}
-                  {item.notes && (
-                    <p className="text-xs p-2 rounded-lg mb-2" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                      {item.notes}
-                    </p>
-                  )}
-
-                  {/* Edit Button */}
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
-                    style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-                  >
-                    <Edit2 size={12} /> Edit Details
-                  </button>
-                </div>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                >
+                  <Edit2 size={12} /> Edit Item Details
+                </button>
               )}
             </div>
           </motion.div>

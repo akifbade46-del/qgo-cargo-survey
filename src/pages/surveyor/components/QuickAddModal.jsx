@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Camera, Mic, Grid, List, Star, Package } from 'lucide-react'
+import { Search, X, Camera, Mic, Grid, List, Star, Package, PlusCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-export default function QuickAddModal({ isOpen, onClose, items = [], categories = [], onAddItem, recentItems = [] }) {
+export default function QuickAddModal({ isOpen, onClose, items = [], categories = [], onAddItem, onManualAdd, recentItems = [] }) {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [viewMode, setViewMode] = useState('grid') // grid or list
@@ -206,12 +206,44 @@ export default function QuickAddModal({ isOpen, onClose, items = [], categories 
                     </div>
                   </motion.button>
                 ))}
+
+                {/* Manual Add Button */}
+                {onManualAdd && (
+                  <motion.button
+                    onClick={onManualAdd}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left mt-2 border-2 border-dashed"
+                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'transparent' }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                      <PlusCircle size={18} style={{ color: 'var(--color-primary)' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        Add Custom Item
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        Item not in list? Add manually
+                      </p>
+                    </div>
+                  </motion.button>
+                )}
               </div>
             ) : (
               <div className="py-12 text-center">
                 <Package size={48} className="mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
                 <p style={{ color: 'var(--text-secondary)' }}>No items found</p>
-                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Try a different search term</p>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>Try a different search or add manually</p>
+                {onManualAdd && (
+                  <button
+                    onClick={onManualAdd}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                    style={{ backgroundColor: 'var(--color-primary)' }}
+                  >
+                    <PlusCircle size={16} className="inline mr-1" /> Add Custom Item
+                  </button>
+                )}
               </div>
             )}
           </div>
