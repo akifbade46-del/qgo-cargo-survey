@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 
+import SurveyDetails from './components/SurveyDetails'
 import SurveyTabNav from './components/SurveyTabNav'
 import RoomsTab from './components/RoomsTab'
 import ItemsTab from './components/ItemsTab'
@@ -13,12 +13,12 @@ import FeedbackPopup from './components/FeedbackPopup'
 
 export default function SurveyorSurvey() {
   const { id } = useParams()
-  const { user } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [survey, setSurvey] = useState(null)
   const [rooms, setRooms] = useState([])
   const [items, setItems] = useState([])
+  const [surveyStarted, setSurveyStarted] = useState(false)
   const [activeTab, setActiveTab] = useState('rooms')
   const [activeRoom, setActiveRoom] = useState(null)
   const [voiceNote, setVoiceNote] = useState(null)
@@ -35,7 +35,12 @@ export default function SurveyorSurvey() {
   async function load() {
     const [{ data: s }, { data: rm }, { data: it }] = await Promise.all([
       supabase.from('survey_requests')
-        .select('id,reference_number,customer_name,customer_email,customer_phone')
+        .select(`
+          id, reference_number, customer_name, customer_email, customer_phone,
+          from_address, from_city, from_country,
+          to_address, to_city, to_country,
+          selected_container, move_type, notes, status, created_at
+        `)
         .eq('id', id).single(),
       supabase.from('survey_rooms')
         .select('*,survey_items(*)')
@@ -48,6 +53,11 @@ export default function SurveyorSurvey() {
     setRooms(rm ?? [])
     setItems(it ?? [])
     if (rm?.length > 0) setActiveRoom(rm[0].id)
+
+    // Check if survey already has items (started)
+    const hasItems = (rm ?? []).some(r => r.survey_items?.length > 0)
+    setSurveyStarted(hasItems || s?.status === 'in_progress')
+
     setLoading(false)
   }
 
@@ -94,6 +104,28 @@ export default function SurveyorSurvey() {
     }
   }
 
+  async function addManualItem(customItem) {
+    const { data, error } = await supabase.from('survey_items')
+      .insert([{
+        survey_room_id: activeRoom,
+        item_id: null,
+        custom_name: customItem.custom_name,
+        cbm: parseFloat(customItem.cbm) || 0,
+        quantity: customItem.quantity || 1,
+        is_fragile: customItem.is_fragile,
+        notes: customItem.notes
+      }]).select().single()
+
+    if (!error && data) {
+      setRooms(p => p.map(r =>
+        r.id === activeRoom
+          ? { ...r, survey_items: [...(r.survey_items || []), data] }
+          : r
+      ))
+      toast.success(`${customItem.custom_name} added!`)
+    }
+  }
+
   async function deleteItem(itemId) {
     await supabase.from('survey_items').delete().eq('id', itemId)
     setRooms(p => p.map(r => ({
@@ -103,15 +135,33 @@ export default function SurveyorSurvey() {
     toast.success('Item deleted')
   }
 
+  async function handleStartSurvey() {
+    // Update status to in_progress
+    await supabase.from('survey_requests')
+      .update({ status: 'in_progress' })
+      .eq('id', id)
+
+    setSurveyStarted(true)
+
+    // Create first room if none exists
+    if (rooms.length === 0) {
+      const { data } = await supabase.from('survey_rooms')
+        .insert([{ survey_request_id: id, room_name: 'Living Room' }])
+        .select().single()
+      if (data) {
+        setRooms([{ ...data, survey_items: [] }])
+        setActiveRoom(data.id)
+      }
+    }
+  }
+
   async function completeSurvey() {
-    // Save voice note if recorded
     if (voiceNote) {
       await supabase.from('survey_requests')
         .update({ voice_note: voiceNote })
         .eq('id', id)
     }
 
-    // Update status
     await supabase.from('survey_requests')
       .update({ status: 'completed' })
       .eq('id', id)
@@ -125,6 +175,11 @@ export default function SurveyorSurvey() {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
       </div>
     )
+  }
+
+  // Show details screen first if survey not started
+  if (!surveyStarted) {
+    return <SurveyDetails survey={survey} onStart={handleStartSurvey} />
   }
 
   const totalCb = allItems.reduce((sum, item) =>
@@ -149,12 +204,7 @@ export default function SurveyorSurvey() {
       <div className="max-w-2xl mx-auto">
         <AnimatePresence mode="wait">
           {activeTab === 'rooms' && (
-            <motion.div
-              key="rooms"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-            >
+            <motion.div key="rooms" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <RoomsTab
                 rooms={rooms}
                 activeRoom={activeRoom}
@@ -165,28 +215,19 @@ export default function SurveyorSurvey() {
             </motion.div>
           )}
           {activeTab === 'items' && (
-            <motion.div
-              key="items"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-            >
+            <motion.div key="items" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ItemsTab
                 currentRoom={currentRoom}
                 items={items}
                 onAddItem={addItemToRoom}
                 onDeleteItem={deleteItem}
-                onPhotoCapture={(item) => {/* TODO: implement photo capture */}}
+                onManualAdd={addManualItem}
+                onPhotoCapture={() => {/* TODO */}}
               />
             </motion.div>
           )}
           {activeTab === 'complete' && (
-            <motion.div
-              key="complete"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-            >
+            <motion.div key="complete" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <CompleteTab
                 rooms={rooms}
                 allItems={allItems}
@@ -221,7 +262,7 @@ export default function SurveyorSurvey() {
             >
               <h3 className="font-bold text-lg mb-4 text-gray-900">Add Room</h3>
               <input
-                className="w-full p-3 rounded-xl bg-gray-100 mb-4 outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full p-3 rounded-xl bg-gray-100 mb-4 outline-none"
                 placeholder="Room name..."
                 value={newRoom}
                 onChange={e => setNewRoom(e.target.value)}
@@ -233,7 +274,7 @@ export default function SurveyorSurvey() {
                   <button
                     key={r}
                     onClick={() => setNewRoom(r)}
-                    className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm text-gray-700 hover:bg-gray-200"
+                    className="px-3 py-1.5 rounded-lg bg-gray-100 text-sm text-gray-700"
                   >
                     {r}
                   </button>
@@ -242,14 +283,14 @@ export default function SurveyorSurvey() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setAddRoomModal(false)}
-                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-medium"
+                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={addRoom}
                   disabled={!newRoom.trim()}
-                  className="flex-1 py-3 rounded-xl bg-green-500 text-white font-medium disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl bg-green-500 text-white disabled:opacity-50"
                 >
                   Add
                 </button>

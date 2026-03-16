@@ -1,16 +1,25 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Camera, Trash2, Package, X } from 'lucide-react'
+import { Search, Camera, Trash2, Package, X, Plus, Edit2 } from 'lucide-react'
 
 export default function ItemsTab({
   currentRoom,
   items,
   onAddItem,
   onDeleteItem,
-  onPhotoCapture
+  onPhotoCapture,
+  onManualAdd
 }) {
   const [search, setSearch] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [manualModal, setManualModal] = useState(false)
+  const [manualItem, setManualItem] = useState({
+    name: '',
+    cbm: '',
+    quantity: 1,
+    is_fragile: false,
+    notes: ''
+  })
 
   const suggestions = useMemo(() => {
     if (!search.trim()) return []
@@ -82,6 +91,18 @@ export default function ItemsTab({
         </AnimatePresence>
       </div>
 
+      {/* Action Buttons */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setManualModal(true)}
+          className="flex-1 py-3 rounded-xl bg-green-500 text-white font-medium
+                     flex items-center justify-center gap-2"
+        >
+          <Plus size={18} />
+          Add Custom Item
+        </button>
+      </div>
+
       {/* Items List */}
       <div className="space-y-3">
         <AnimatePresence mode="popLayout">
@@ -145,10 +166,121 @@ export default function ItemsTab({
           <div className="text-center py-12">
             <Package size={48} className="mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500">No items yet</p>
-            <p className="text-sm text-gray-400">Search above to add items</p>
+            <p className="text-sm text-gray-400">Search above or tap Add Custom Item</p>
           </div>
         )}
       </div>
+
+      {/* Manual Item Modal */}
+      <AnimatePresence>
+        {manualModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setManualModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm"
+            >
+              <h3 className="font-bold text-lg mb-4">Add Custom Item</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-600 mb-1 block">Item Name *</label>
+                  <input
+                    type="text"
+                    value={manualItem.name}
+                    onChange={e => setManualItem(p => ({ ...p, name: e.target.value }))}
+                    placeholder="e.g. Antique Vase"
+                    className="w-full p-3 rounded-xl bg-gray-100"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-gray-600 mb-1 block">CBM</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={manualItem.cbm}
+                      onChange={e => setManualItem(p => ({ ...p, cbm: e.target.value }))}
+                      placeholder="0.00"
+                      className="w-full p-3 rounded-xl bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600 mb-1 block">Qty</label>
+                    <input
+                      type="number"
+                      value={manualItem.quantity}
+                      onChange={e => setManualItem(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
+                      className="w-full p-3 rounded-xl bg-gray-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="fragile"
+                    checked={manualItem.is_fragile}
+                    onChange={e => setManualItem(p => ({ ...p, is_fragile: e.target.checked }))}
+                    className="w-5 h-5 rounded"
+                  />
+                  <label htmlFor="fragile" className="text-gray-700">Fragile item</label>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-600 mb-1 block">Notes (optional)</label>
+                  <textarea
+                    value={manualItem.notes}
+                    onChange={e => setManualItem(p => ({ ...p, notes: e.target.value }))}
+                    placeholder="Any special notes..."
+                    className="w-full p-3 rounded-xl bg-gray-100 h-20 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setManualModal(false)
+                    setManualItem({ name: '', cbm: '', quantity: 1, is_fragile: false, notes: '' })
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (manualItem.name.trim()) {
+                      onManualAdd({
+                        custom_name: manualItem.name,
+                        cbm: parseFloat(manualItem.cbm) || 0,
+                        quantity: manualItem.quantity || 1,
+                        is_fragile: manualItem.is_fragile,
+                        notes: manualItem.notes
+                      })
+                      setManualModal(false)
+                      setManualItem({ name: '', cbm: '', quantity: 1, is_fragile: false, notes: '' })
+                    }
+                  }}
+                  disabled={!manualItem.name.trim()}
+                  className="flex-1 py-3 rounded-xl bg-green-500 text-white disabled:opacity-50"
+                >
+                  Add Item
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
