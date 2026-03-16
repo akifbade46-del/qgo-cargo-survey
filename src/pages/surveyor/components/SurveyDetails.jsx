@@ -1,23 +1,29 @@
 import { motion } from 'framer-motion'
 import {
   User, Phone, Mail, MapPin, Truck, Package,
-  Calendar, FileText, Play
+  Calendar, FileText, Play, Edit2, Mic, Image
 } from 'lucide-react'
 
-export default function SurveyDetails({ survey, onStart }) {
+export default function SurveyDetails({ survey, onStart, onReopen, isCompleted }) {
   if (!survey) return null
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-md mx-auto space-y-4">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
+        <div className={`rounded-2xl p-6 text-white ${
+          isCompleted
+            ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
+            : 'bg-gradient-to-r from-green-500 to-emerald-600'
+        }`}>
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm opacity-80">Survey Request</p>
               <h1 className="text-xl font-bold">#{survey.reference_number}</h1>
             </div>
-            <div className="px-3 py-1 bg-white/20 rounded-lg text-sm">
+            <div className={`px-3 py-1 rounded-lg text-sm ${
+              isCompleted ? 'bg-white/20' : 'bg-white/20'
+            }`}>
               {survey.status || 'Pending'}
             </div>
           </div>
@@ -113,6 +119,31 @@ export default function SurveyDetails({ survey, onStart }) {
           </div>
         </div>
 
+        {/* Completed Survey Info */}
+        {isCompleted && (
+          <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
+            <h3 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+              <FileText size={16} />
+              Survey Already Completed
+            </h3>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {survey.voice_note && (
+                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full flex items-center gap-1">
+                  <Mic size={12} /> Voice Note
+                </span>
+              )}
+              {survey.total_photos > 0 && (
+                <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full flex items-center gap-1">
+                  <Image size={12} /> {survey.total_photos} Photos
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-blue-600">
+              You can edit this survey. Voice note and photos will be preserved.
+            </p>
+          </div>
+        )}
+
         {/* Notes */}
         {survey.notes && (
           <div className="bg-yellow-50 rounded-2xl p-4 border border-yellow-200">
@@ -121,16 +152,28 @@ export default function SurveyDetails({ survey, onStart }) {
           </div>
         )}
 
-        {/* Start Button */}
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={onStart}
-          className="w-full py-4 rounded-2xl bg-green-600 text-white font-semibold
-                   flex items-center justify-center gap-2 shadow-lg mt-4"
-        >
-          <Play size={20} />
-          Start Survey
-        </motion.button>
+        {/* Action Button */}
+        {isCompleted ? (
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={onReopen}
+            className="w-full py-4 rounded-2xl bg-blue-600 text-white font-semibold
+                     flex items-center justify-center gap-2 shadow-lg mt-4"
+          >
+            <Edit2 size={20} />
+            Edit / Update Survey
+          </motion.button>
+        ) : (
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={onStart}
+            className="w-full py-4 rounded-2xl bg-green-600 text-white font-semibold
+                     flex items-center justify-center gap-2 shadow-lg mt-4"
+          >
+            <Play size={20} />
+            Start Survey
+          </motion.button>
+        )}
       </div>
     </div>
   )

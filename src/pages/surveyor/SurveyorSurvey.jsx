@@ -18,6 +18,7 @@ export default function SurveyorSurvey() {
   const [survey, setSurvey] = useState(null)
   const [rooms, setRooms] = useState([])
   const [items, setItems] = useState([])
+  const [categories, setCategories] = useState([])
   const [surveyStarted, setSurveyStarted] = useState(false)
   const [activeTab, setActiveTab] = useState('rooms')
   const [activeRoom, setActiveRoom] = useState(null)
@@ -33,7 +34,7 @@ export default function SurveyorSurvey() {
   useEffect(() => { load() }, [id])
 
   async function load() {
-    const [{ data: s }, { data: rm }, { data: it }] = await Promise.all([
+    const [{ data: s }, { data: rm }, { data: it }, { data: cats }] = await Promise.all([
       supabase.from('survey_requests')
         .select(`
           id, reference_number, customer_name, customer_email, customer_phone,
@@ -47,11 +48,15 @@ export default function SurveyorSurvey() {
         .eq('survey_request_id', id).order('created_at'),
       supabase.from('items')
         .select('id,name,default_cbm,default_weight_kg,is_fragile')
-        .eq('is_active', true).order('name')
+        .eq('is_active', true).order('name'),
+      supabase.from('item_categories')
+        .select('id, name')
+        .order('name')
     ])
     setSurvey(s)
     setRooms(rm ?? [])
     setItems(it ?? [])
+    setCategories(cats ?? [])
     if (rm?.length > 0) setActiveRoom(rm[0].id)
 
     // Check if survey already has items (started)
@@ -156,17 +161,38 @@ export default function SurveyorSurvey() {
   }
 
   async function completeSurvey() {
+    // Save voice note if recorded
     if (voiceNote) {
       await supabase.from('survey_requests')
         .update({ voice_note: voiceNote })
         .eq('id', id)
     }
 
+    // Check if survey was already completed (update mode)
+    const wasCompleted = survey?.status === 'completed'
+
+    if (!wasCompleted) {
+      // First time completion - update status
+      await supabase.from('survey_requests')
+        .update({ status: 'completed' })
+        .eq('id', id)
+      setShowFeedbackPopup(true)
+    } else {
+      // Update mode - just show success
+      toast.success('Survey updated!')
+      navigate('/surveyor')
+    }
+  }
+
+  async function handleReopenSurvey() {
+    // Change status back to in_progress
     await supabase.from('survey_requests')
-      .update({ status: 'completed' })
+      .update({ status: 'in_progress' })
       .eq('id', id)
 
-    setShowFeedbackPopup(true)
+    setSurvey(p => ({ ...p, status: 'in_progress' }))
+    setSurveyStarted(true)
+    toast.success('Survey reopened for editing')
   }
 
   if (loading) {
@@ -179,7 +205,14 @@ export default function SurveyorSurvey() {
 
   // Show details screen first if survey not started
   if (!surveyStarted) {
-    return <SurveyDetails survey={survey} onStart={handleStartSurvey} />
+    return (
+      <SurveyDetails
+        survey={survey}
+        onStart={handleStartSurvey}
+        onReopen={handleReopenSurvey}
+        isCompleted={survey?.status === 'completed'}
+      />
+    )
   }
 
   const totalCb = allItems.reduce((sum, item) =>
@@ -219,6 +252,7 @@ export default function SurveyorSurvey() {
               <ItemsTab
                 currentRoom={currentRoom}
                 items={items}
+                categories={categories}
                 onAddItem={addItemToRoom}
                 onDeleteItem={deleteItem}
                 onManualAdd={addManualItem}

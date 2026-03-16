@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Camera, Trash2, Package, X, Plus, Edit2 } from 'lucide-react'
+import { Search, Camera, Trash2, Package, X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function ItemsTab({
   currentRoom,
   items,
+  categories,
   onAddItem,
   onDeleteItem,
   onPhotoCapture,
@@ -13,6 +14,8 @@ export default function ItemsTab({
   const [search, setSearch] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [manualModal, setManualModal] = useState(false)
+  const [expandedCategory, setExpandedCategory] = useState(null)
+  const [showItemBrowser, setShowItemBrowser] = useState(true)
   const [manualItem, setManualItem] = useState({
     name: '',
     cbm: '',
@@ -30,6 +33,18 @@ export default function ItemsTab({
   }, [search, items])
 
   const roomItems = currentRoom?.survey_items || []
+
+  // Group items by category
+  const itemsByCategory = useMemo(() => {
+    const grouped = {}
+    items.forEach(item => {
+      const catId = item.category_id || 'other'
+      const catName = categories?.find(c => c.id === catId)?.name || 'Other'
+      if (!grouped[catName]) grouped[catName] = []
+      grouped[catName].push(item)
+    })
+    return grouped
+  }, [items, categories])
 
   const handleSelectItem = (item) => {
     onAddItem(item)
@@ -61,7 +76,7 @@ export default function ItemsTab({
           )}
         </div>
 
-        {/* Suggestions Dropdown */}
+        {/* Search Suggestions Dropdown */}
         <AnimatePresence>
           {showSuggestions && suggestions.length > 0 && (
             <motion.div
@@ -69,7 +84,7 @@ export default function ItemsTab({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl
-                         shadow-lg border border-gray-100 overflow-hidden z-10"
+                         shadow-lg border border-gray-100 overflow-hidden z-10 max-h-64 overflow-y-auto"
             >
               {suggestions.map((item) => (
                 <button
@@ -84,6 +99,7 @@ export default function ItemsTab({
                     <p className="font-medium text-gray-900">{item.name}</p>
                     <p className="text-xs text-gray-500">{item.default_cbm} CBM</p>
                   </div>
+                  <Plus size={16} className="text-green-500" />
                 </button>
               ))}
             </motion.div>
@@ -91,19 +107,95 @@ export default function ItemsTab({
         </AnimatePresence>
       </div>
 
-      {/* Action Buttons */}
+      {/* Quick Actions */}
       <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setShowItemBrowser(!showItemBrowser)}
+          className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-medium
+                     flex items-center justify-center gap-2"
+        >
+          <Package size={18} />
+          {showItemBrowser ? 'Hide' : 'Show'} Items
+        </button>
         <button
           onClick={() => setManualModal(true)}
           className="flex-1 py-3 rounded-xl bg-green-500 text-white font-medium
                      flex items-center justify-center gap-2"
         >
           <Plus size={18} />
-          Add Custom Item
+          Custom Item
         </button>
       </div>
 
-      {/* Items List */}
+      {/* Item Browser - Category Accordion */}
+      <AnimatePresence>
+        {showItemBrowser && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mb-4"
+          >
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              {Object.entries(itemsByCategory).map(([category, categoryItems]) => (
+                <div key={category} className="border-b border-gray-100 last:border-b-0">
+                  {/* Category Header */}
+                  <button
+                    onClick={() => setExpandedCategory(expandedCategory === category ? null : category)}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{category}</span>
+                      <span className="text-xs text-gray-400">({categoryItems.length})</span>
+                    </div>
+                    {expandedCategory === category ? (
+                      <ChevronUp size={18} className="text-gray-400" />
+                    ) : (
+                      <ChevronDown size={18} className="text-gray-400" />
+                    )}
+                  </button>
+
+                  {/* Category Items */}
+                  <AnimatePresence>
+                    {expandedCategory === category && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: 'auto' }}
+                        exit={{ height: 0 }}
+                        className="overflow-hidden bg-gray-50"
+                      >
+                        <div className="p-3 grid grid-cols-2 gap-2">
+                          {categoryItems.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => handleSelectItem(item)}
+                              className="p-3 bg-white rounded-xl text-left hover:shadow-md
+                                       transition-shadow border border-gray-100"
+                            >
+                              <p className="font-medium text-sm text-gray-900 truncate">
+                                {item.name}
+                              </p>
+                              <p className="text-xs text-gray-500">{item.default_cbm} CBM</p>
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Added Items Section */}
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900">
+          Added Items ({roomItems.length})
+        </h3>
+      </div>
+
       <div className="space-y-3">
         <AnimatePresence mode="popLayout">
           {roomItems.map((item) => (
@@ -128,13 +220,18 @@ export default function ItemsTab({
                       {(item.cbm || 0).toFixed(2)} CBM • Qty: {item.quantity || 1}
                     </p>
                     {item.is_fragile && (
-                      <span className="text-xs text-red-500">Fragile</span>
+                      <span className="text-xs text-red-500">⚠️ Fragile</span>
+                    )}
+                    {item.notes && (
+                      <p className="text-xs text-gray-400 mt-1">{item.notes}</p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {item.photos?.length > 0 && (
-                    <span className="text-xs text-gray-400">📷 {item.photos.length}</span>
+                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                      📷 {item.photos.length}
+                    </span>
                   )}
                 </div>
               </div>
@@ -142,7 +239,7 @@ export default function ItemsTab({
               {/* Action Buttons */}
               <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                 <button
-                  onClick={() => onPhotoCapture(item)}
+                  onClick={() => onPhotoCapture && onPhotoCapture(item)}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg
                            bg-gray-100 text-gray-600 text-sm hover:bg-gray-200"
                 >
@@ -163,10 +260,10 @@ export default function ItemsTab({
         </AnimatePresence>
 
         {roomItems.length === 0 && (
-          <div className="text-center py-12">
+          <div className="text-center py-12 bg-gray-50 rounded-2xl">
             <Package size={48} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No items yet</p>
-            <p className="text-sm text-gray-400">Search above or tap Add Custom Item</p>
+            <p className="text-gray-500">No items added yet</p>
+            <p className="text-sm text-gray-400">Browse items above or add custom</p>
           </div>
         )}
       </div>
@@ -186,7 +283,7 @@ export default function ItemsTab({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
-              className="bg-white rounded-2xl p-6 w-full max-w-sm"
+              className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto"
             >
               <h3 className="font-bold text-lg mb-4">Add Custom Item</h3>
 
